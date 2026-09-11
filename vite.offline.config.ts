@@ -14,8 +14,18 @@ export default defineConfig({
     outDir: "offline-dist",
     emptyOutDir: true,
     assetsInlineLimit: 0,
+    cssCodeSplit: false,
+    modulePreload: false,
     rollupOptions: {
       input: resolve(import.meta.dirname, "offline.html"),
+      output: {
+        format: "iife",
+        name: "DayNightGlobe",
+        inlineDynamicImports: true,
+        entryFileNames: "assets/app.js",
+        chunkFileNames: "assets/[name].js",
+        assetFileNames: "assets/[name][extname]",
+      },
     },
   },
 });

@@ -16,6 +16,7 @@ import {
   SYSTEM_MIN,
 } from "@/lib/astro";
 import { useGlobeStore } from "@/store/globe-store";
+import { assetUrl } from "@/lib/asset-url";
 import { moonFragment, moonVertex, sunFragment, sunVertex } from "./shaders";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 
@@ -37,7 +38,7 @@ export function CelestialSystem({ sunDir }: { sunDir: THREE.Vector3 }) {
 }
 
 function Moon({ sunDir }: { sunDir: THREE.Vector3 }) {
-  const map = useTexture("/textures/moon.jpg");
+  const map = useTexture(assetUrl("textures/moon.jpg"));
   const group = useRef<THREE.Group>(null);
   const uniforms = useMemo(
     () => ({

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { isFileProtocol } from "@/lib/asset-url";
 
 export function applyColorMap(tex: THREE.Texture, anisotropy: number) {
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -9,7 +10,24 @@ export function applyColorMap(tex: THREE.Texture, anisotropy: number) {
   tex.needsUpdate = true;
 }
 
+function loadWithImage(url: string, anisotropy: number): Promise<THREE.Texture> {
+  return new Promise((resolve, reject) => {
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin("anonymous");
+    loader.load(
+      url,
+      (tex) => {
+        applyColorMap(tex, anisotropy);
+        resolve(tex);
+      },
+      undefined,
+      reject,
+    );
+  });
+}
+
 export function loadColorMap(url: string, anisotropy: number): Promise<THREE.Texture> {
+  if (isFileProtocol()) return loadWithImage(url, anisotropy);
   return new Promise((resolve, reject) => {
     const loader = new THREE.ImageBitmapLoader();
     loader.setCrossOrigin("anonymous");
@@ -22,7 +40,9 @@ export function loadColorMap(url: string, anisotropy: number): Promise<THREE.Tex
         resolve(tex);
       },
       undefined,
-      reject,
+      () => {
+        loadWithImage(url, anisotropy).then(resolve, reject);
+      },
     );
   });
 }

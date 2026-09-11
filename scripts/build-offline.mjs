@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, renameSync, existsSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, renameSync, existsSync, writeFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,7 +19,15 @@ const htmlSrc = join(out, "offline.html");
 const htmlDst = join(out, "index.html");
 if (existsSync(htmlSrc)) renameSync(htmlSrc, htmlDst);
 
+let html = readFileSync(htmlDst, "utf8");
+html = html
+  .replace(/\s*type="module"/g, "")
+  .replace(/\s*crossorigin(?:="[^"]*")?/g, "")
+  .replace("<script src=", '<script defer src=');
+writeFileSync(htmlDst, html);
+
 copyFileSync(join(root, "scripts", "serve-offline.mjs"), join(out, "serve.mjs"));
+copyFileSync(join(root, "scripts", "serve-offline.ps1"), join(out, "serve.ps1"));
 copyFileSync(join(root, "scripts", "start-offline.bat"), join(out, "启动地球.bat"));
 
 writeFileSync(
@@ -27,17 +35,16 @@ writeFileSync(
   [
     "昼夜地球 · 完全离线版",
     "",
-    "这个文件夹已经包含全部贴图、国界数据和程序，拷到没有网的电脑即可。",
+    "不需要安装 Node、Python，也不需要联网。",
     "",
-    "Windows：双击「启动地球.bat」",
-    "  （需要已安装 Python 3 或 Node.js，装软件时用离线安装包，运行地球不联网。）",
+    "Windows：",
+    "  双击「启动地球.bat」",
+    "  它会用系统自带的 PowerShell 打开 http://127.0.0.1:8080",
     "",
-    "其它系统：",
-    "  python3 -m http.server 8080 --bind 127.0.0.1",
-    "  或  node serve.mjs",
+    "如果公司电脑连 PowerShell 都禁用了：",
+    "  用 Chrome 或 Edge 直接打开 index.html",
     "",
-    "然后用 Chrome / Edge 打开 http://127.0.0.1:8080",
-    "不要直接双击 index.html，浏览器会拦截本地贴图。",
+    "浏览器用 Chrome / Edge（需要支持 WebGL）。IE 不行。",
     "",
   ].join("\r\n"),
   "utf8",

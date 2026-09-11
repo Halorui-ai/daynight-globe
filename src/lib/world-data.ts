@@ -7,6 +7,7 @@ import {
   pointInGeometry,
   type GeoGeometry,
 } from "@/lib/geo";
+import atlasJson from "../../public/data/countries-110m.json";
 
 export type Country = {
   id: string;
@@ -21,10 +22,7 @@ export type Country = {
 
 type Atlas = Topology<{ countries: GeometryCollection<{ name: string }> }>;
 
-export async function loadCountries(): Promise<Country[]> {
-  const res = await fetch("/data/countries-110m.json");
-  if (!res.ok) throw new Error("无法载入国界数据");
-  const topology = (await res.json()) as Atlas;
+function parseCountries(topology: Atlas): Country[] {
   const fc = feature(topology, topology.objects.countries);
   return fc.features.map((f) => {
     const nameRaw = f.properties?.name ?? "Unknown";
@@ -42,6 +40,10 @@ export async function loadCountries(): Promise<Country[]> {
       areaHint: geometryAreaHint(geometry),
     };
   });
+}
+
+export async function loadCountries(): Promise<Country[]> {
+  return parseCountries(atlasJson as unknown as Atlas);
 }
 
 export function findCountryAt(countries: Country[], lon: number, lat: number) {

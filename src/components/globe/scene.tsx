@@ -28,6 +28,7 @@ import {
   SUN_WORLD,
 } from "@/lib/astro";
 import { applyColorMap, afterPaint, loadColorMap } from "@/lib/load-texture";
+import { assetUrl } from "@/lib/asset-url";
 import { CelestialSystem, ViewController } from "./system";
 import {
   atmosFragment,
@@ -261,9 +262,9 @@ function Earth({
   onReady: () => void;
 }) {
   const [dayMap, nightMap, bumpMap] = useTexture([
-    "/textures/earth-day-2k.jpg",
-    "/textures/earth-night-2k.jpg",
-    "/textures/earth-topology.png",
+    assetUrl("textures/earth-day-2k.jpg"),
+    assetUrl("textures/earth-night-2k.jpg"),
+    assetUrl("textures/earth-topology.png"),
   ]);
   const { gl, camera } = useThree();
   const uniforms = useMemo(
@@ -290,8 +291,8 @@ function Earth({
     let cancelled = false;
     const stop4 = afterPaint(() => {
       void Promise.all([
-        loadColorMap("/textures/earth-day-4k.jpg", aniso),
-        loadColorMap("/textures/earth-night-4k.jpg", aniso),
+        loadColorMap(assetUrl("textures/earth-day-4k.jpg"), aniso),
+        loadColorMap(assetUrl("textures/earth-night-4k.jpg"), aniso),
       ]).then(([dayHi, nightHi]) => {
         if (cancelled) {
           dayHi.dispose();
@@ -321,8 +322,8 @@ function Earth({
     hiStage.current = "8k-loading";
     const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
     void Promise.all([
-      loadColorMap("/textures/earth-day-8k.jpg", aniso),
-      loadColorMap("/textures/earth-night-8k.jpg", aniso),
+      loadColorMap(assetUrl("textures/earth-day-8k.jpg"), aniso),
+      loadColorMap(assetUrl("textures/earth-night-8k.jpg"), aniso),
     ]).then(([day8, night8]) => {
       if (hiStage.current !== "8k-loading") {
         day8.dispose();
@@ -434,7 +435,7 @@ function Earth({
 }
 
 function Clouds({ sunDir }: { sunDir: THREE.Vector3 }) {
-  const map = useTexture("/textures/earth-clouds.jpg");
+  const map = useTexture(assetUrl("textures/earth-clouds.jpg"));
   const ref = useRef<THREE.Mesh>(null);
   const visible = useGlobeStore((s) => s.showClouds);
   const uniforms = useMemo(

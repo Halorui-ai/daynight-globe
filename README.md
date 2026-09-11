@@ -38,18 +38,11 @@ npm run build:offline
 
 把 `offline-dist/` 整个文件夹拷到 U 盘，再到公司电脑：
 
-1. 电脑需已安装 **Python 3** 或 **Node.js**（可用离线安装包，运行地球时不用网）
-2. 浏览器用 Chrome 或 Edge（需要 WebGL）
-3. Windows 双击 `启动地球.bat`，然后打开 http://127.0.0.1:8080
-4. 不要直接双击 `index.html`，浏览器会拦截本地贴图
+1. 浏览器用 **Chrome 或 Edge**（需要 WebGL；IE / 旧版 360 可能不行）
+2. Windows **双击 `启动地球.bat`** —— 用系统自带的 PowerShell 打开，**不用安装 Node / Python，也不用联网**
+3. 如果 PowerShell 被禁用：用 Chrome / Edge 直接打开文件夹里的 `index.html`
 
-```bash
-# 其它系统
-cd offline-dist
-python3 -m http.server 8080 --bind 127.0.0.1
-# 或
-node serve.mjs
-```
+公司电脑不需要下载任何软件。
 
 ## 贴图
 

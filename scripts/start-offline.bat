@@ -2,32 +2,21 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 echo.
-echo  昼夜地球 离线版
-echo  打开浏览器访问 http://127.0.0.1:8080
-echo  按 Ctrl+C 结束
+echo  昼夜地球 · 离线版（不需要安装任何软件）
 echo.
 
-where py >nul 2>&1
+REM 1) Windows 自带 PowerShell 起本地网页（最稳）
+where powershell >nul 2>&1
 if %errorlevel%==0 (
-  start "" http://127.0.0.1:8080
-  py -m http.server 8080 --bind 127.0.0.1
+  echo  正在打开 http://127.0.0.1:8080
+  echo  关闭本窗口即停止
+  echo.
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0serve.ps1"
   goto :eof
 )
 
-where python >nul 2>&1
-if %errorlevel%==0 (
-  start "" http://127.0.0.1:8080
-  python -m http.server 8080 --bind 127.0.0.1
-  goto :eof
-)
-
-where node >nul 2>&1
-if %errorlevel%==0 (
-  start "" http://127.0.0.1:8080
-  node serve.mjs
-  goto :eof
-)
-
-echo 这台电脑需要安装 Python 3 或 Node.js（安装时不需要联网，用安装包即可）。
-echo 装好后重新双击本文件。
+REM 2) 没有 PowerShell 时直接用浏览器打开（Chrome / Edge）
+echo  改为直接打开网页文件
+start "" "%~dp0index.html"
+echo  若地球是黑的，请用 Chrome 或 Edge 打开本文件夹里的 index.html
 pause
