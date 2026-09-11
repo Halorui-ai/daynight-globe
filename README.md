@@ -25,6 +25,32 @@ npm run preview  # 预览构建结果
 - 底部可调时间流速（实时 / 1 日每分 / 1 日每秒）
 - 「地月日」查看三体轨道关系；点「地球」回到地表
 
+## 离线运行（公司内网 / 不能联网的电脑）
+
+地球仪本身不访问互联网：贴图、国界、城市数据都在本地。但 **`npm install` 必须联网**，而且不要把 Linux 上的 `node_modules` 拷到 Windows（里面有系统相关的二进制，会直接报错）。
+
+正确做法：在能上网的电脑打包一次，把生成的文件夹拷走。
+
+```bash
+npm install
+npm run build:offline
+```
+
+把 `offline-dist/` 整个文件夹拷到 U 盘，再到公司电脑：
+
+1. 电脑需已安装 **Python 3** 或 **Node.js**（可用离线安装包，运行地球时不用网）
+2. 浏览器用 Chrome 或 Edge（需要 WebGL）
+3. Windows 双击 `启动地球.bat`，然后打开 http://127.0.0.1:8080
+4. 不要直接双击 `index.html`，浏览器会拦截本地贴图
+
+```bash
+# 其它系统
+cd offline-dist
+python3 -m http.server 8080 --bind 127.0.0.1
+# 或
+node serve.mjs
+```
+
 ## 贴图
 
 `public/textures/` 里是分级分辨率：
@@ -36,7 +62,7 @@ npm run preview  # 预览构建结果
 | `earth-day-8k.jpg` / `earth-night-8k.jpg` | 桌面端拉近地表时才加载 |
 | `earth-clouds.jpg` | 云层（灰度） |
 
-白天来自 NASA Blue Marble，夜景来自 Black Marble。首屏只加载约 0.4 MB 的 2K 图；空闲后再换成 4K。8K 只在电脑上把地球拉得很近时才会下载，避免一进来就卡。
+白天来自 NASA Blue Marble，夜景来自 Black Marble。首屏只加载约 0.4 MB 的 2K 图；空闲后再换成 4K。8K 只在电脑上把地球拉得很近时才会从本地读取。
 
 ## 技术
 

@@ -3,6 +3,7 @@ node_modules/
 .output/
 .nitro/
 dist/
+offline-dist/
 artifacts/
 attachments/
 screenshots/
