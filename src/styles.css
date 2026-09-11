@@ -11,8 +11,8 @@
   --color-accent: #c8ccd4;
   --color-accent-fg: #07090e;
 
-  --font-sans: "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
-  --font-display: "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
+  --font-display: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --text-2xs: 0.6875rem;

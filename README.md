@@ -33,10 +33,10 @@ npm run preview  # 预览构建结果
 |---|---|
 | `earth-day-2k.jpg` / `earth-night-2k.jpg` | 首屏立刻显示 |
 | `earth-day-4k.jpg` / `earth-night-4k.jpg` | 手机后台增强 |
-| `earth-day-8k.jpg` / `earth-night-8k.jpg` | 桌面后台增强 |
+| `earth-day-8k.jpg` / `earth-night-8k.jpg` | 桌面端拉近地表时才加载 |
 | `earth-clouds.jpg` | 云层（灰度） |
 
-白天来自 NASA Blue Marble，夜景来自 Black Marble。首屏只加载约 0.4 MB 的 2K 图，高清在空闲时再换上。
+白天来自 NASA Blue Marble，夜景来自 Black Marble。首屏只加载约 0.4 MB 的 2K 图；空闲后再换成 4K。8K 只在电脑上把地球拉得很近时才会下载，避免一进来就卡。
 
 ## 技术
 

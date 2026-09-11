@@ -43,9 +43,9 @@ export function GlobeApp() {
       <h1 className="sr-only">昼夜地球</h1>
       <Canvas
         className="touch-none"
-        dpr={[1, 1.5]}
+        dpr={typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches ? [1, 1.25] : [1, 1.5]}
         gl={{
-          antialias: true,
+          antialias: typeof window === "undefined" || !window.matchMedia("(pointer: coarse)").matches,
           powerPreference: "high-performance",
           alpha: false,
         }}
@@ -54,6 +54,7 @@ export function GlobeApp() {
           gl.setClearColor("#05070c");
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.02;
+          setReady(true);
         }}
         onPointerMissed={() => useGlobeStore.getState().setSelected(null)}
       >

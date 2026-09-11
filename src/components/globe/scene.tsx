@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars, useTexture } from "@react-three/drei";
 import * as THREE from "three";
@@ -55,6 +55,13 @@ const WORLD_UP = new THREE.Vector3(0, 1, 0);
 
 type NodesRef = MutableRefObject<Map<string, HTMLElement>>;
 
+function DeferredStars() {
+  const [on, setOn] = useState(false);
+  useEffect(() => afterPaint(() => setOn(true), 900), []);
+  if (!on) return null;
+  return <Stars radius={420} depth={70} count={1600} factor={3.1} saturation={0} fade speed={0.18} />;
+}
+
 export function GlobeScene({
   countries,
   nodesRef,
@@ -71,7 +78,7 @@ export function GlobeScene({
   return (
     <>
       <color attach="background" args={["#05070c"]} />
-      <Stars radius={420} depth={70} count={2400} factor={3.2} saturation={0} fade speed={0.2} />
+      <DeferredStars />
       <TimeDriver sunDir={sunDir.current} earthBary={earthBary} earthSpin={earthSpin} />
       <InitialView sunDir={sunDir.current} />
       <group ref={earthBary}>
@@ -269,6 +276,8 @@ function Earth({
     [dayMap, nightMap, bumpMap, sunDir],
   );
 
+  const hiStage = useRef<"2k" | "4k" | "8k" | "8k-loading">("2k");
+  const extrasRef = useRef<THREE.Texture[]>([]);
   useEffect(() => {
     const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
     applyColorMap(dayMap, aniso);
@@ -278,34 +287,54 @@ function Earth({
     bumpMap.needsUpdate = true;
     onReady();
 
-    const coarse = window.matchMedia("(pointer: coarse)").matches;
-    const hi =
-      !coarse && gl.capabilities.maxTextureSize >= 8192
-        ? { day: "/textures/earth-day-8k.jpg", night: "/textures/earth-night-8k.jpg" }
-        : { day: "/textures/earth-day-4k.jpg", night: "/textures/earth-night-4k.jpg" };
-
     let cancelled = false;
-    const extra: THREE.Texture[] = [];
-    const stop = afterPaint(() => {
-      void Promise.all([loadColorMap(hi.day, aniso), loadColorMap(hi.night, aniso)]).then(
-        ([dayHi, nightHi]) => {
-          if (cancelled) {
-            dayHi.dispose();
-            nightHi.dispose();
-            return;
-          }
-          extra.push(dayHi, nightHi);
-          uniforms.dayMap.value = dayHi;
-          uniforms.nightMap.value = nightHi;
-        },
-      );
-    }, 700);
+    const stop4 = afterPaint(() => {
+      void Promise.all([
+        loadColorMap("/textures/earth-day-4k.jpg", aniso),
+        loadColorMap("/textures/earth-night-4k.jpg", aniso),
+      ]).then(([dayHi, nightHi]) => {
+        if (cancelled) {
+          dayHi.dispose();
+          nightHi.dispose();
+          return;
+        }
+        extrasRef.current.push(dayHi, nightHi);
+        uniforms.dayMap.value = dayHi;
+        uniforms.nightMap.value = nightHi;
+        hiStage.current = "4k";
+      });
+    }, 480);
     return () => {
       cancelled = true;
-      stop();
-      for (const t of extra) t.dispose();
+      stop4();
+      for (const t of extrasRef.current) t.dispose();
+      extrasRef.current = [];
+      hiStage.current = "2k";
     };
   }, [dayMap, nightMap, bumpMap, gl, onReady, uniforms]);
+
+  useFrame(() => {
+    if (hiStage.current !== "4k") return;
+    if (camera.position.length() > 2.28) return;
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    if (gl.capabilities.maxTextureSize < 8192) return;
+    hiStage.current = "8k-loading";
+    const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
+    void Promise.all([
+      loadColorMap("/textures/earth-day-8k.jpg", aniso),
+      loadColorMap("/textures/earth-night-8k.jpg", aniso),
+    ]).then(([day8, night8]) => {
+      if (hiStage.current !== "8k-loading") {
+        day8.dispose();
+        night8.dispose();
+        return;
+      }
+      uniforms.dayMap.value = day8;
+      uniforms.nightMap.value = night8;
+      extrasRef.current.push(day8, night8);
+      hiStage.current = "8k";
+    });
+  });
 
   const drag = useRef({ x: 0, y: 0, moved: false, down: false });
   const hoverAcc = useRef(0);
