@@ -36,13 +36,19 @@ npm install
 npm run build:offline
 ```
 
-把 `offline-dist/` 整个文件夹拷到 U 盘，再到公司电脑：
+把 `offline-dist/` **整个文件夹**拷到 U 盘，再到公司电脑：
 
-1. 浏览器用 **Chrome 或 Edge**（需要 WebGL；IE / 旧版 360 可能不行）
-2. Windows **双击 `启动地球.bat`** —— 用系统自带的 PowerShell 打开，**不用安装 Node / Python，也不用联网**
-3. 如果 PowerShell 被禁用：用 Chrome / Edge 直接打开文件夹里的 `index.html`
+1. 浏览器用 **Chrome 或 Edge**（需要 WebGL；IE / 360 兼容模式会得到全黑画面）
+2. Windows **双击 `启动地球.bat`** —— 用系统自带的 PowerShell 打开 `http://127.0.0.1:8080`，**不用安装 Node / Python，也不用联网**
+3. **黑色命令窗口必须一直开着**。关掉它，网页也就停了
+4. **不要直接双击 `index.html`**。浏览器会拦截 `file://` 下的贴图，地球是全黑的
 
-公司电脑不需要下载任何软件。
+公司电脑不需要下载任何软件。若窗口闪一下就关：看同目录里的 `start-error.txt`，并把整个 `offline-dist` 文件夹一起拷走（不要只拷 bat）。
+
+若仍是全黑，看地址栏：
+
+- 以 `file:///` 开头：没有走本地网页服务，回到第 2 步
+- 是 `http://127.0.0.1:8080` 但仍全黑：换 Edge / Chrome，关掉 360，不要用远程桌面
 
 ## 贴图
 

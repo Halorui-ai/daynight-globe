@@ -5,6 +5,7 @@ import { Hud } from "@/components/overlay/Hud";
 import { HoverCard } from "@/components/overlay/HoverCard";
 import { LabelLayer } from "@/components/overlay/LabelLayer";
 import { Splash } from "@/components/overlay/Splash";
+import { detectBootBlock } from "@/lib/offline-boot";
 import { loadCountries, type Country } from "@/lib/world-data";
 import { useGlobeStore } from "@/store/globe-store";
 import { GlobeScene } from "./scene";
@@ -14,7 +15,12 @@ export function GlobeApp() {
   const [countries, setCountries] = useState<Country[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [block, setBlock] = useState<ReturnType<typeof detectBootBlock>>(null);
   const onReady = useCallback(() => setReady(true), []);
+
+  useEffect(() => {
+    setBlock(detectBootBlock());
+  }, []);
 
   useEffect(() => {
     const t = window.setTimeout(() => setReady(true), 10000);
@@ -34,6 +40,17 @@ export function GlobeApp() {
       cancelled = true;
     };
   }, []);
+
+  if (block) {
+    return (
+      <div className="flex h-dvh items-center justify-center bg-bg p-6 text-fg">
+        <div className="max-w-md space-y-3">
+          <p className="font-display text-xl tracking-tight">{block.title}</p>
+          <p className="text-sm leading-relaxed text-muted">{block.detail}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

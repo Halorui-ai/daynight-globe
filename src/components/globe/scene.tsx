@@ -28,7 +28,7 @@ import {
   SUN_WORLD,
 } from "@/lib/astro";
 import { applyColorMap, afterPaint, loadColorMap } from "@/lib/load-texture";
-import { assetUrl } from "@/lib/asset-url";
+import { assetUrl, isFileProtocol } from "@/lib/asset-url";
 import { CelestialSystem, ViewController } from "./system";
 import {
   atmosFragment,
@@ -288,6 +288,8 @@ function Earth({
     bumpMap.needsUpdate = true;
     onReady();
 
+    if (isFileProtocol()) return;
+
     let cancelled = false;
     const stop4 = afterPaint(() => {
       void Promise.all([
@@ -315,6 +317,7 @@ function Earth({
   }, [dayMap, nightMap, bumpMap, gl, onReady, uniforms]);
 
   useFrame(() => {
+    if (isFileProtocol()) return;
     if (hiStage.current !== "4k") return;
     if (camera.position.length() > 2.28) return;
     if (window.matchMedia("(pointer: coarse)").matches) return;

@@ -13,7 +13,7 @@ export function applyColorMap(tex: THREE.Texture, anisotropy: number) {
 function loadWithImage(url: string, anisotropy: number): Promise<THREE.Texture> {
   return new Promise((resolve, reject) => {
     const loader = new THREE.TextureLoader();
-    loader.setCrossOrigin("anonymous");
+    loader.setCrossOrigin(isFileProtocol() ? "" : "anonymous");
     loader.load(
       url,
       (tex) => {
