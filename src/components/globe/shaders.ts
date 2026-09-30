@@ -46,11 +46,10 @@ void main() {
     if (uu > 0.0 && uu < 1.0 && vv > 0.0 && vv < 1.0) {
       vec4 det = texture2D(detailMap, vec2(uu, vv));
       if (det.a > 0.45) {
-        vec3 low = texture2D(detailMap, vec2(uu, vv), 3.4).rgb;
         float fx = smoothstep(0.0, 0.08, uu) * smoothstep(1.0, 0.92, uu);
         float fy = smoothstep(0.0, 0.08, vv) * smoothstep(1.0, 0.92, vv);
         float w = fx * fy * detailStrength;
-        day = clamp(day + (det.rgb - low) * (1.2 * w), 0.0, 1.0);
+        day = mix(day, det.rgb, w);
       }
     }
   }
