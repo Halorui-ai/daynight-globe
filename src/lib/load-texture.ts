@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { isFileProtocol } from "@/lib/asset-url";
 
+export function rendererAnisotropy(gl: THREE.WebGLRenderer) {
+  return Math.min(16, gl.capabilities.getMaxAnisotropy() || 1);
+}
+
 export function applyColorMap(tex: THREE.Texture, anisotropy: number) {
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = anisotropy;

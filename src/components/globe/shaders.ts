@@ -16,7 +16,13 @@ export const earthFragment = /* glsl */ `
 uniform sampler2D dayMap;
 uniform sampler2D nightMap;
 uniform sampler2D bumpMap;
+uniform sampler2D detailMap;
 uniform vec3 sunDirection;
+uniform float detailCenterLon;
+uniform float detailHalfLon;
+uniform float detailSouth;
+uniform float detailNorth;
+uniform float detailStrength;
 
 varying vec2 vUv;
 varying vec3 vNormal;
@@ -30,6 +36,24 @@ void main() {
 
   float ndl = dot(n, sun);
   vec3 day = texture2D(dayMap, vUv).rgb;
+  if (detailStrength > 0.004 && detailHalfLon > 0.05 && detailNorth > detailSouth) {
+    float lon = vUv.x * 360.0 - 180.0;
+    float lat = vUv.y * 180.0 - 90.0;
+    float dlon = lon - detailCenterLon;
+    dlon = mod(dlon + 180.0, 360.0) - 180.0;
+    float uu = dlon / (detailHalfLon * 2.0) + 0.5;
+    float vv = (lat - detailSouth) / (detailNorth - detailSouth);
+    if (uu > 0.0 && uu < 1.0 && vv > 0.0 && vv < 1.0) {
+      vec4 det = texture2D(detailMap, vec2(uu, vv));
+      if (det.a > 0.45) {
+        vec3 low = texture2D(detailMap, vec2(uu, vv), 3.4).rgb;
+        float fx = smoothstep(0.0, 0.08, uu) * smoothstep(1.0, 0.92, uu);
+        float fy = smoothstep(0.0, 0.08, vv) * smoothstep(1.0, 0.92, vv);
+        float w = fx * fy * detailStrength;
+        day = clamp(day + (det.rgb - low) * (1.2 * w), 0.0, 1.0);
+      }
+    }
+  }
   vec3 nightTex = texture2D(nightMap, vUv).rgb;
 
   float wrap = max(ndl, 0.0);
@@ -108,6 +132,7 @@ void main() {
 export const cloudFragment = /* glsl */ `
 uniform sampler2D cloudMap;
 uniform vec3 sunDirection;
+uniform float cover;
 varying vec2 vUv;
 varying vec3 vNormal;
 varying vec3 vWorldPos;
@@ -131,7 +156,7 @@ void main() {
 
   float alpha = density * mix(0.05, 0.64, day);
   alpha += density * rim * 0.10;
-  alpha = clamp(alpha, 0.0, 0.76);
+  alpha = clamp(alpha, 0.0, 0.76) * cover;
 
   gl_FragColor = vec4(color, alpha);
   #include <tonemapping_fragment>

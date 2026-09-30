@@ -27,8 +27,9 @@ import {
   MOON_WORLD,
   SUN_WORLD,
 } from "@/lib/astro";
-import { applyColorMap, afterPaint, loadColorMap } from "@/lib/load-texture";
+import { applyColorMap, afterPaint, loadColorMap, rendererAnisotropy } from "@/lib/load-texture";
 import { assetUrl, isFileProtocol } from "@/lib/asset-url";
+import { DetailComposer } from "./detail-map";
 import { CelestialSystem, ViewController } from "./system";
 import {
   atmosFragment,
@@ -267,20 +268,40 @@ function Earth({
     assetUrl("textures/earth-topology.png"),
   ]);
   const { gl, camera } = useThree();
+  const detailPlaceholder = useMemo(() => {
+    const tex = new THREE.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    return tex;
+  }, []);
   const uniforms = useMemo(
     () => ({
       dayMap: { value: dayMap },
       nightMap: { value: nightMap },
       bumpMap: { value: bumpMap },
       sunDirection: { value: sunDir },
+      detailMap: { value: detailPlaceholder as THREE.Texture },
+      detailCenterLon: { value: 0 },
+      detailHalfLon: { value: 1 },
+      detailSouth: { value: -1 },
+      detailNorth: { value: 1 },
+      detailStrength: { value: 0 },
     }),
-    [dayMap, nightMap, bumpMap, sunDir],
+    [dayMap, nightMap, bumpMap, sunDir, detailPlaceholder],
   );
 
   const hiStage = useRef<"2k" | "4k" | "8k" | "8k-loading">("2k");
   const extrasRef = useRef<THREE.Texture[]>([]);
+  const load8k = useRef<(() => void) | null>(null);
+  const detail = useRef<DetailComposer | null>(null);
+  const coarse = useRef(false);
   useEffect(() => {
-    const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
+    coarse.current = window.matchMedia("(pointer: coarse)").matches;
+    return () => detailPlaceholder.dispose();
+  }, [detailPlaceholder]);
+
+  useEffect(() => {
+    const aniso = rendererAnisotropy(gl);
     applyColorMap(dayMap, aniso);
     applyColorMap(nightMap, aniso);
     bumpMap.colorSpace = THREE.NoColorSpace;
@@ -288,9 +309,46 @@ function Earth({
     bumpMap.needsUpdate = true;
     onReady();
 
-    if (isFileProtocol()) return;
+    const composer = new DetailComposer(aniso);
+    composer.onCommit = (plan) => {
+      uniforms.detailCenterLon.value = plan.centerLon;
+      uniforms.detailHalfLon.value = plan.halfLon;
+      uniforms.detailSouth.value = plan.south;
+      uniforms.detailNorth.value = plan.north;
+    };
+    uniforms.detailMap.value = composer.texture;
+    detail.current = composer;
+
+    if (isFileProtocol()) {
+      return () => {
+        composer.dispose();
+        detail.current = null;
+      };
+    }
 
     let cancelled = false;
+    const start8k = () => {
+      if (cancelled || hiStage.current === "8k" || hiStage.current === "8k-loading") return;
+      if (gl.capabilities.maxTextureSize < 8192) return;
+      hiStage.current = "8k-loading";
+      void Promise.all([
+        loadColorMap(assetUrl("textures/earth-day-8k.jpg"), aniso),
+        loadColorMap(assetUrl("textures/earth-night-8k.jpg"), aniso),
+      ]).then(([day8, night8]) => {
+        if (cancelled || hiStage.current !== "8k-loading") {
+          day8.dispose();
+          night8.dispose();
+          return;
+        }
+        for (const tex of extrasRef.current) tex.dispose();
+        extrasRef.current = [day8, night8];
+        uniforms.dayMap.value = day8;
+        uniforms.nightMap.value = night8;
+        hiStage.current = "8k";
+      });
+    };
+    load8k.current = start8k;
+
     const stop4 = afterPaint(() => {
       void Promise.all([
         loadColorMap(assetUrl("textures/earth-day-4k.jpg"), aniso),
@@ -301,51 +359,66 @@ function Earth({
           nightHi.dispose();
           return;
         }
+        if (hiStage.current === "8k" || hiStage.current === "8k-loading") {
+          dayHi.dispose();
+          nightHi.dispose();
+          return;
+        }
         extrasRef.current.push(dayHi, nightHi);
         uniforms.dayMap.value = dayHi;
         uniforms.nightMap.value = nightHi;
         hiStage.current = "4k";
+        if (!coarse.current) {
+          afterPaint(() => start8k(), 700);
+        }
       });
     }, 480);
     return () => {
       cancelled = true;
       stop4();
+      load8k.current = null;
+      composer.dispose();
+      detail.current = null;
+      uniforms.detailMap.value = detailPlaceholder;
       for (const t of extrasRef.current) t.dispose();
       extrasRef.current = [];
       hiStage.current = "2k";
     };
-  }, [dayMap, nightMap, bumpMap, gl, onReady, uniforms]);
+  }, [dayMap, nightMap, bumpMap, gl, onReady, uniforms, detailPlaceholder]);
 
   useFrame(() => {
-    if (isFileProtocol()) return;
-    if (hiStage.current !== "4k") return;
-    if (camera.position.length() > 2.28) return;
-    if (window.matchMedia("(pointer: coarse)").matches) return;
-    if (gl.capabilities.maxTextureSize < 8192) return;
-    hiStage.current = "8k-loading";
-    const aniso = Math.min(8, gl.capabilities.getMaxAnisotropy());
-    void Promise.all([
-      loadColorMap(assetUrl("textures/earth-day-8k.jpg"), aniso),
-      loadColorMap(assetUrl("textures/earth-night-8k.jpg"), aniso),
-    ]).then(([day8, night8]) => {
-      if (hiStage.current !== "8k-loading") {
-        day8.dispose();
-        night8.dispose();
-        return;
-      }
-      uniforms.dayMap.value = day8;
-      uniforms.nightMap.value = night8;
-      extrasRef.current.push(day8, night8);
-      hiStage.current = "8k";
-    });
+    const dist = camera.position.length();
+    const globe = useGlobeStore.getState().viewMode === "globe" && dist < 10;
+    if (
+      globe &&
+      coarse.current &&
+      hiStage.current === "4k" &&
+      dist < 2.2 &&
+      !isFileProtocol()
+    ) {
+      load8k.current?.();
+    }
+    const composer = detail.current;
+    if (!composer) return;
+    if (!globe || isFileProtocol()) {
+      composer.targetStrength = 0;
+    } else {
+      const { lat, lon } = vec3ToLatLon(camera.position);
+      const width = gl.domElement.clientWidth || 1;
+      const height = gl.domElement.clientHeight || 1;
+      composer.update({ lat, lon, distance: dist, aspect: width / height });
+    }
+    const current = uniforms.detailStrength.value;
+    const target = composer.targetStrength;
+    if (Math.abs(current - target) > 0.004) {
+      uniforms.detailStrength.value = current + (target - current) * 0.18;
+    } else if (current !== target) {
+      uniforms.detailStrength.value = target;
+    }
   });
 
   const drag = useRef({ x: 0, y: 0, moved: false, down: false });
   const hoverAcc = useRef(0);
-  const coarse = useRef(false);
-  useEffect(() => {
-    coarse.current = window.matchMedia("(pointer: coarse)").matches;
-  }, []);
 
   const pickAt = (clientX: number, clientY: number) => {
     const rect = gl.domElement.getBoundingClientRect();
@@ -441,22 +514,28 @@ function Clouds({ sunDir }: { sunDir: THREE.Vector3 }) {
   const map = useTexture(assetUrl("textures/earth-clouds.jpg"));
   const ref = useRef<THREE.Mesh>(null);
   const visible = useGlobeStore((s) => s.showClouds);
+  const { camera, gl } = useThree();
   const uniforms = useMemo(
     () => ({
       cloudMap: { value: map },
       sunDirection: { value: sunDir },
+      cover: { value: 1 },
     }),
     [map, sunDir],
   );
   useEffect(() => {
     map.colorSpace = THREE.SRGBColorSpace;
-    map.anisotropy = 8;
+    map.anisotropy = rendererAnisotropy(gl);
     map.needsUpdate = true;
-  }, [map]);
+  }, [map, gl]);
   useFrame(() => {
     if (!ref.current) return;
-    const t = useGlobeStore.getState().simTime;
-    ref.current.rotation.y = (t / 86_400_000) * Math.PI * 0.35;
+    const state = useGlobeStore.getState();
+    const dist = camera.position.length();
+    const globe = state.viewMode === "globe" && dist < 12;
+    const t = THREE.MathUtils.clamp((dist - 1.32) / (2.55 - 1.32), 0, 1);
+    uniforms.cover.value = globe ? 0.18 + 0.82 * t : 1;
+    ref.current.rotation.y = (state.simTime / 86_400_000) * Math.PI * 0.35;
   });
   if (!visible) return null;
   return (
